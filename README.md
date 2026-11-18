@@ -81,3 +81,7 @@ Chrome Beta、Brave、Edge 也可以用同一個資料夾載入。更新時 `git
 - 在暫時的 Chromium 145 headless 設定檔裡載入擴充功能，用 Playwright 跑 `test/test.html` 全部情況，加上「仍然複製」、網頁假裝點按鈕、一律允許、紀錄：**21/21 通過**。
 - 對照組：同樣的測試不裝擴充功能，攔截類的 10 項全部失敗，假指令和假地址都進了剪貼簿，證明測試有效。
 - 真實網站：GitHub（ollama README）和 rustup.rs 的「複製」按鈕都照常複製 `curl … | sh`，沒有誤擋。
+
+## 授權
+
+MIT，見 [LICENSE](LICENSE)。
